@@ -16,13 +16,10 @@ namespace hopmate.Server.Controllers
     {
         private readonly TripService _tripService;
         private readonly PenaltyService _penaltyService;
-        private readonly DriverService _driverService;
-
-        public TripController(TripService tripService, PenaltyService penaltyService, DriverService driverService)
+        public TripController(TripService tripService, PenaltyService penaltyService)
         {
             _tripService = tripService;
             _penaltyService = penaltyService;
-            _driverService = driverService;
         }
 
         [HttpPost]
@@ -106,83 +103,57 @@ namespace hopmate.Server.Controllers
         }
 
         [HttpPost("cancel/{id}")]
-        public async Task<IActionResult> CancelTripDriver(Guid id, [FromBody] CancelTripDto dto, bool uM)
+        public async Task<IActionResult> CancelTripDriver(Guid id)
         {
-            bool isDriver;
             var trip = await _tripService.GetTripAsync(id);
-            int error;
-
             if (trip == null)
                 return NotFound("Trip not found.");
 
-            if (!uM)
+            if (trip.IdStatusTrip == 4)
+                return Content("Trip already cancelled");
+
+            int error = await _tripService.CancelTripAsync(id);
+            if (error != 4)
+                return BadRequest("Something went wrong, please try again.");
+
+            List<Guid> passengers = await _tripService.GetPassengerIdsAsync(id);
+            if (!(passengers.Count > 0))
+                return Ok("Trip successfully cancelled!!");
+
+            await _penaltyService.AddPenaltyAsync(new PenaltyDto
             {
-                isDriver = await _driverService.IsDriver(dto.IdDriver);
-                if (!isDriver)
-                    return Unauthorized("Not a driver");
+                IdUser = trip.IdDriver,
+                Hops = 10,
+                Points = 100,
+                Description = "Trip cancelled id:" + trip.Id
+            });
 
-                if (trip.IdStatusTrip == 4)
-                    return Content("Trip already cancelled");
+            var origin = await _tripService.GetLocationOrigin(trip.Id);
+            var destination = await _tripService.GetLocationDestination(trip.Id);
 
-                error = await _tripService.CancelTripAsync(id);
-                if (error != 4)
-                    return BadRequest("Something went wrong, please try again.");
+            if (origin == null || destination == null)
+                return BadRequest("Trip locations are invalid.");
 
-                return Ok("Trip cancelled successfully.");
-            }
-
-            if (uM)
+            TripSimilarityRequestDto tripDto = new TripSimilarityRequestDto
             {
-                List<Guid> passengers = await _tripService.GetPassengerIdsAsync(id);
-                if (!(passengers.Count > 0))
-                    return Ok("Trip successfully cancelled!!");
+                Id = trip.Id,
+                DateDeparture = trip.DtDeparture,
+                DateArrival = trip.DtArrival,
+                PostalOrigin = origin,
+                PostalDestination = destination
+            };
 
-                if (passengers.Contains(dto.IdDriver))
-                {
-                    await _penaltyService.AddPenaltyAsync(new PenaltyDto
-                    {
-                        IdUser = trip.IdDriver,
-                        Hops = 10,
-                        Points = 100,
-                        Description = "Trip cancelled id:" + trip.Id
-                    });
-
-                    var origin = await _tripService.GetLocationOrigin(trip.Id);
-                    var destination = await _tripService.GetLocationDestination(trip.Id);
-
-                    if (origin == null || destination == null)
-                        return BadRequest("Trip locations are invalid.");
-
-                    TripSimilarityRequestDto tripDto = new TripSimilarityRequestDto
-                    {
-                        Id = trip.Id,
-                        DateDeparture = trip.DtDeparture,
-                        DateArrival = trip.DtArrival,
-                        PostalOrigin = origin,
-                        PostalDestination = destination
-                    };
-
-                    return Ok(tripDto);
-                }
-
-                return BadRequest("O utilizador não fazia parte da viagem.");
-            }
-
-            return Ok();
+            return Ok(tripDto);
         }
 
-        [HttpPost("searchsimilar/{idTrip}/{idUser}")]
-        public async Task<IActionResult> SearchSimilarTrips(Guid idTrip, Guid idUser)
+        [HttpPost("searchsimilar")]
+        public async Task<IActionResult> SearchSimilarTrips([FromBody] TripSimilarityRequestDto dto)
         {
-            var tripDto = await _tripService.GetTripSimilarityDataAsync(idTrip);
+            var tripDto = await _tripService.SearchSimilarTripsAsync(dto);
             if (tripDto == null)
-                return NotFound("Não foi possível obter dados da viagem original.");
+                return NotFound();
 
-            var similarTrips = await _tripService.SearchSimilarTripsAsync(tripDto, idUser);
-            if (similarTrips == null || !similarTrips.Any())
-                return NotFound("Nenhuma viagem semelhante encontrada.");
-
-            return Ok(similarTrips);
+            return Ok(tripDto);
         }
 
         [HttpGet("driver/{driverId}")]
@@ -208,6 +179,5 @@ namespace hopmate.Server.Controllers
 
             return Ok(vehicle);
         }
-
     }
 }

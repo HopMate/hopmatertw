@@ -141,7 +141,6 @@ export const passengerService = {
         }
     },
 
-    // Get all requests made by the current passenger
     getMyRequests: async (): Promise<PassengerTripDto[]> => {
         try {
             const response = await axiosInstance.get('/PassengerTrip/myrequests');
@@ -153,30 +152,29 @@ export const passengerService = {
             } else if (response.data.$values) {
                 requestsData = response.data.$values;
             } else {
-                requestsData = [response.data]; // Handle a single object response
+                requestsData = [response.data];
             }
 
-            // Map the backend data to our frontend model
             return requestsData.map((req: any) => ({
-                id: req.Id || '',
-                passengerId: req.PassengerId || '',
-                passengerName: req.PassengerName,
-                tripId: req.TripId || '',
-                locationId: req.LocationId || '',
-                pickupLocation: req.PickupLocation || req.LocationName,
-                requestStatusId: req.RequestStatusId || 0,
-                requestStatus: req.RequestStatus || 'Unknown',
-                requestDate: req.RequestDate || new Date().toISOString(),
-                reason: req.Reason,
-                previousStatus: req.PreviousStatus,
-                queuePosition: req.QueuePosition,
-                trip: req.Trip ? {
-                    origin: req.Trip.Origin || 'Unknown',
-                    destination: req.Trip.Destination || 'Unknown',
-                    departureTime: req.Trip.DepartureTime || new Date().toISOString(),
-                    driverName: req.Trip.DriverName,
-                    availableSeats: req.Trip.AvailableSeats || 0
-                } : undefined
+                id: req.id || req.Id || '',
+                passengerId: req.passengerId || req.PassengerId || '',
+                passengerName: req.passengerName || req.PassengerName || 'Unknown',
+                tripId: req.tripId || req.TripId || '',
+                locationId: req.locationId || req.LocationId || '',
+                pickupLocation: req.pickupLocation || req.PickupLocation || req.locationId || 'Not specified',
+                requestStatusId: req.requestStatusId || req.RequestStatusId || 0,
+                requestStatus: req.requestStatus || req.RequestStatus || 'Unknown',
+                requestDate: req.requestDate || req.RequestDate || new Date().toISOString(),
+                reason: req.reason || req.Reason,
+                previousStatus: req.previousStatus || req.PreviousStatus,
+                queuePosition: req.queuePosition || req.QueuePosition,
+                trip: {
+                    origin: req.origin || req.Origin || req.trip?.origin || req.trip?.Origin || 'Unknown',
+                    destination: req.destination || req.Destination || req.trip?.destination || req.trip?.Destination || 'Unknown',
+                    departureTime: req.departureTime || req.DepartureTime || req.trip?.departureTime || req.trip?.DepartureTime || '',
+                    driverName: req.driverName || req.DriverName || req.trip?.driverName || req.trip?.DriverName || 'Unknown driver',
+                    availableSeats: req.availableSeats || req.AvailableSeats || req.trip?.availableSeats || req.trip?.AvailableSeats || 0
+                }
             }));
         } catch (error) {
             console.error('Error fetching passenger requests:', error);
