@@ -1,0 +1,10 @@
+@hopmate.Server_HostAddress = http://localhost:5081
+
+POST {{hopmate.Server_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+    "username": "testuser",  
+    "password": "testpassword"
+}
+###
