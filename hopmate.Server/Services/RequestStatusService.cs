@@ -8,10 +8,12 @@ namespace hopmate.Server.Services
     public class RequestStatusService
     {
         private readonly ApplicationDbContext _context;
+        private readonly TripService _tripService;
 
-        public RequestStatusService(ApplicationDbContext context)
+        public RequestStatusService(ApplicationDbContext context, TripService tripService)
         {
             _context = context;
+            _tripService = tripService;
         }
 
         // Retorna todos os Status no formato DTO
@@ -61,6 +63,28 @@ namespace hopmate.Server.Services
             await _context.SaveChangesAsync();
             return existing;
         }
+
+        public async Task<int> ChangeStatus(Guid idTrip, Guid idUser, int status)
+        {
+            var trip = await _tripService.GetTripAsync(idTrip);
+
+            if (trip == null)
+                return 0;
+
+            var trip_user = await _context.PassengerTrips
+                .FirstOrDefaultAsync(t => t.IdTrip == idTrip && t.IdPassenger == idUser);
+
+            if (trip_user == null)
+                return 0;
+
+            trip_user.IdRequestStatus = status;
+
+            _context.Entry(trip_user).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return status;
+        }
+
 
         // Deleta um Status
         public async Task<bool> DeleteAsync(int id)

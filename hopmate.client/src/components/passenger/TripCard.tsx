@@ -3,14 +3,12 @@ import React from 'react';
 import { format } from 'date-fns';
 import { AvailableTripDto, TripAvailabilityDto } from '../../types';
 import Button from '../ui/Button';
-
 interface TripCardProps {
     trip: AvailableTripDto;
     onSelect: (trip: AvailableTripDto) => void;
     isRequested: boolean;
     availability?: TripAvailabilityDto; // Make it optional
 }
-
 const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, isRequested, availability }) => {
     const formatDepartureTime = (departureTime: string) => {
         try {
@@ -20,10 +18,8 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, isRequested, availa
             return 'Invalid date';
         }
     };
-
     // Get available seats - use availability if it exists, otherwise fall back to trip.availableSeats
     const availableSeats = availability?.availableSeats ?? trip.availableSeats;
-
     return (
         <div className="bg-white rounded-lg shadow-md p-6 flex flex-col">
             <div className="mb-4">
@@ -32,14 +28,12 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, isRequested, availa
                     <span className="font-medium">Departure:</span> {formatDepartureTime(trip.departureTime)}
                 </p>
             </div>
-
             <div className="flex items-center mb-4">
                 <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mr-2">
                     {availableSeats} seats available
                 </div>
                 <div className="text-gray-600 text-sm">Driver: {trip.driverName}</div>
             </div>
-
             <div className="mt-auto">
                 <Button
                     onClick={() => onSelect(trip)}
@@ -52,5 +46,4 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, isRequested, availa
         </div>
     );
 };
-
 export default TripCard;

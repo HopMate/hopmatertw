@@ -1,14 +1,18 @@
 ﻿// client/src/components/passenger/MyRequestCard.tsx
-
 import React from 'react';
 import { PassengerTripDto } from '../../types';
 import Badge from '../ui/Badge';
+import Button from '../ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 interface MyRequestCardProps {
     request: PassengerTripDto;
+    userId?: string; // Adicionado para usar na navegação
 }
 
-const MyRequestCard: React.FC<MyRequestCardProps> = ({ request }) => {
+const MyRequestCard: React.FC<MyRequestCardProps> = ({ request, userId }) => {
+    const navigate = useNavigate();
+
     const getStatusBadgeVariant = () => {
         switch (request.requestStatus?.toLowerCase()) {
             case 'pending':
@@ -50,6 +54,12 @@ const MyRequestCard: React.FC<MyRequestCardProps> = ({ request }) => {
         }
     };
 
+    // Função para procurar viagens semelhantes
+    const handleSearchSimilarTrips = (tripId: string) => {
+        if (!userId) return;
+        navigate(`/similar/${tripId}/${userId}`);
+    };
+
     return (
         <div className="bg-white shadow rounded-lg p-4 mb-4">
             <div className="flex justify-between items-start mb-2">
@@ -60,13 +70,24 @@ const MyRequestCard: React.FC<MyRequestCardProps> = ({ request }) => {
                     {request.requestStatus || 'Unknown status'}
                 </Badge>
             </div>
-
             <div className="text-sm text-gray-600 mb-2">
                 <p>Departure: {formatDate(request.trip?.departureTime || '')}</p>
                 <p>Pickup Location: {request.pickupLocation || 'Not specified'}</p>
                 <p>Request Date: {formatDate(request.requestDate)}</p>
                 {request.trip?.driverName && <p>Driver: {request.trip.driverName}</p>}
             </div>
+
+            {/* Botão para procurar viagens semelhantes quando idRequestStatus for 5 */}
+            {request.requestStatusId === 5 && (
+                <div className="mt-3 mb-2">
+                    <Button
+                        onClick={() => request.tripId && handleSearchSimilarTrips(request.tripId)}
+                        className="bg-green-600 hover:bg-green-700 text-sm w-full"
+                    >
+                        Procurar Semelhantes
+                    </Button>
+                </div>
+            )}
 
             {request.requestStatus?.toLowerCase() === 'rejected' && request.reason && (
                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
@@ -75,7 +96,6 @@ const MyRequestCard: React.FC<MyRequestCardProps> = ({ request }) => {
                     </p>
                 </div>
             )}
-
             <div className="mt-2 text-sm text-gray-600">
                 <p>{getStatusDescription()}</p>
                 {request.requestStatus?.toLowerCase() === 'waitinglist' && (

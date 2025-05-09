@@ -10,5 +10,10 @@ namespace hopmate.Server.Models.Entities
         public required string Status { get; set; }
 
         public ICollection<PassengerTrip> PassengerTrips { get; set; } = new List<PassengerTrip>();
+
+        public static implicit operator RequestStatus(int v)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

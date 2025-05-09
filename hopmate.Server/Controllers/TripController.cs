@@ -17,12 +17,14 @@ namespace hopmate.Server.Controllers
         private readonly TripService _tripService;
         private readonly PenaltyService _penaltyService;
         private readonly DriverService _driverService;
+        private readonly RequestStatusService _requestStatus;
 
-        public TripController(TripService tripService, PenaltyService penaltyService, DriverService driverService)
+        public TripController(TripService tripService, PenaltyService penaltyService, DriverService driverService, RequestStatusService requestStatus)
         {
             _tripService = tripService;
             _penaltyService = penaltyService;
             _driverService = driverService;
+            _requestStatus = requestStatus;
         }
 
         [HttpPost]
@@ -113,49 +115,70 @@ namespace hopmate.Server.Controllers
             {
                 if (id == Guid.Empty)
                 {
-                    return BadRequest("ID de viagem inválido.");
+                    return BadRequest("Invalid trip ID.");
                 }
 
                 if (dto == null || dto.IdDriver == Guid.Empty)
                 {
-                    return BadRequest("Dados do motorista inválidos ou ausentes.");
+                    return BadRequest("Invalid or missing driver data.");
                 }
 
                 var trip = await _tripService.GetTripAsync(id);
                 if (trip == null)
                 {
-                    return NotFound("Viagem não encontrada.");
+                    return NotFound("Trip not found.");
                 }
 
                 bool isDriver = await _driverService.IsDriver(dto.IdDriver);
                 if (!isDriver)
                 {
-                    return Unauthorized("Utilizador não é um motorista.");
+                    return Unauthorized("User is not a driver.");
                 }
 
                 if (trip.IdDriver != dto.IdDriver)
                 {
-                    return Unauthorized("Apenas o motorista responsável pode cancelar esta viagem.");
+                    return Unauthorized("Only the responsible driver can cancel this trip.");
                 }
 
                 if (trip.IdStatusTrip == 4)
                 {
-                    return BadRequest("Viagem já está cancelada.");
+                    return BadRequest("Trip is already cancelled.");
                 }
 
-                // Cancelar a viagem
                 int status = await _tripService.CancelTripAsync(id);
                 if (status != 4)
                 {
-                    return BadRequest("Ocorreu um erro ao cancelar a viagem. Por favor, tente novamente.");
+                    return BadRequest("An error occurred while canceling the trip. Please try again.");
                 }
 
-                return Ok("Viagem cancelada com sucesso.");
+                List<Guid> passengers = await _tripService.GetPassengerIdsAsync(id);
+                if (!(passengers.Count > 0))
+                    return Ok("Trip successfully cancelled!!");
+
+                await _penaltyService.AddPenaltyAsync(new PenaltyDto
+                {
+                    IdUser = trip.IdDriver,
+                    Hops = 10,
+                    Points = 100,
+                    Description = "Trip cancelled id:" + trip.Id
+                });
+
+                foreach (var passenger in passengers)
+                {
+                    var result = await _requestStatus.ChangeStatus(trip.Id, passenger, 5);
+                    if (result != 5)
+                    {
+                        return StatusCode(500, $"Failed to update RequestStatus for passenger {passenger}. Expected status: 5, got: {result}");
+                    }
+                }
+
+                return Ok("Trip successfully cancelled.");
+                
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro ao cancelar viagem: {ex.Message}");
-                return StatusCode(500, $"Erro interno ao processar a solicitação: {ex.Message}");
+                Console.WriteLine($"Error canceling trip: {ex.Message}");
+                return StatusCode(500, $"Internal error processing request: {ex.Message}");
             }
         }
 
