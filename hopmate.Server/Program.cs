@@ -48,6 +48,7 @@ public class Program
         builder.Services.AddScoped<TripService>();
         builder.Services.AddScoped<PenaltyService>();
         builder.Services.AddScoped<RequestStatusService>();
+        builder.Services.AddScoped<DriverService>();
 
         // Register Trip Participation Services
         builder.Services.AddScoped<TripParticipationService>();

@@ -71,17 +71,16 @@ namespace hopmate.Server.Services
 
             return (false, errors);
         }
-
-        public async Task<(string Token, string Message)> LoginAsync(LoginDto loginDto)
+        public async Task<(string Token, string Message, Guid? IdUser)> LoginAsync(LoginDto loginDto)
         {
             var user = await _userManager.FindByNameAsync(loginDto.Username);
             if (user != null && await _userManager.CheckPasswordAsync(user, loginDto.Password))
             {
                 var token = _jwtService.GenerateToken(user);
-                return (token, "Login successful.");
+                return (token, "Login successful.", user.Id);
             }
 
-            return (string.Empty, "Invalid credentials.");
+            return (string.Empty, "Invalid credentials.", null);
         }
     }
 }

@@ -38,11 +38,11 @@ namespace hopmate.Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var (token, message) = await _authService.LoginAsync(loginDto);
-
+            var (token, message, userId) = await _authService.LoginAsync(loginDto);
+            
             if (!string.IsNullOrEmpty(token))
             {
-                return Ok(new { Token = token });
+                return Ok(new { Token = token, UserId = userId });
             }
 
             return Unauthorized(new { Message = message });
